@@ -133,14 +133,22 @@
         {% endfor %}
           ],
           "api_vips": [
-        {% for network in controlplane_network %}
+        {% if controlplane_network_api is defined %}
+            {"ip": "{{ controlplane_network_api }}"}
+        {% else %}
+          {% for network in controlplane_network %}
             {"ip": "{{ network | ansible.utils.nthhost(3) }}"}{{ "," if not loop.last else "" }}
-        {% endfor %}
+          {% endfor %}
+        {% endif %}
           ],
           "ingress_vips": [
-        {% for network in controlplane_network %}
+        {% if controlplane_network_ingress is defined %}
+            {"ip": "{{ controlplane_network_ingress }}"}
+        {% else %}
+          {% for network in controlplane_network %}
             {"ip": "{{ network | ansible.utils.nthhost(4) }}"}{{ "," if not loop.last else "" }}
-        {% endfor %}
+          {% endfor %}
+        {% endif %}
           ],
           "pull_secret": {{ pull_secret | tojson | tojson }},
           "ssh_public_key": "{{ lookup('file', ssh_public_key_file) }}",
@@ -154,10 +162,10 @@
       path: "/etc/hosts"
       backup: true
       block: |
-        {{ controlplane_network[0] | ansible.utils.nthhost(3) }} api.{{ cluster_name }}.{{ base_dns_name }}
-        {{ controlplane_network[0] | ansible.utils.nthhost(3) }} api-int.{{ cluster_name }}.{{ base_dns_name }}
+        {{ controlplane_network_api | default(controlplane_network[0] | ansible.utils.nthhost(3)) }} api.{{ cluster_name }}.{{ base_dns_name }}
+        {{ controlplane_network_api | default(controlplane_network[0] | ansible.utils.nthhost(3)) }} api-int.{{ cluster_name }}.{{ base_dns_name }}
         {% for route in etc_hosts_ingress_routes %}
-        {{ controlplane_network[0] | ansible.utils.nthhost(4) }} {{ route }}.apps.{{ cluster_name }}.{{ base_dns_name }}
+        {{ controlplane_network_ingress | default(controlplane_network[0] | ansible.utils.nthhost(4)) }} {{ route }}.apps.{{ cluster_name }}.{{ base_dns_name }}
         {% endfor %}
       insertafter: "EOF"
       marker: "# {mark} {{ cluster_name }} OCP CLUSTER MANAGED BLOCK"
