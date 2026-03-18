@@ -52,6 +52,34 @@
   - enable_bond | default(false)
   - sno_use_lab_dhcp | default(false)
 
+- name: Validate enable_bond_vlan requires enable_bond
+  fail:
+    msg: "enable_bond_vlan requires enable_bond to be true"
+  when:
+  - enable_bond_vlan | default(false)
+  - not (enable_bond | default(false))
+
+- name: Validate bond_vlan_id range
+  fail:
+    msg: "bond_vlan_id must be between 1 and 4094"
+  when:
+  - enable_bond_vlan | default(false)
+  - bond_vlan_id | default(10) < 1 or bond_vlan_id | default(10) > 4094
+
+- name: Validate setup_bastion_proxy and setup_bastion_registry are mutually exclusive
+  fail:
+    msg: "setup_bastion_proxy and setup_bastion_registry cannot both be true. Use either a forward proxy OR a local mirror registry, not both."
+  when:
+  - setup_bastion_proxy | default(false)
+  - setup_bastion_registry | default(false)
+
+- name: Validate setup_bastion_proxy and use_bastion_registry are mutually exclusive
+  fail:
+    msg: "setup_bastion_proxy and use_bastion_registry cannot both be true. Use either a forward proxy OR a local mirror registry, not both."
+  when:
+  - setup_bastion_proxy | default(false)
+  - use_bastion_registry | default(false)
+
 - name: Check for RHEL/Centos (Bastion Validation)
   fail:
     msg: "Expecting RHEL or Centos for a Bastion OS"
@@ -124,6 +152,8 @@
   when: hostvars | json_query('(*)[?network_mac]')
 
 - name: Validate network configuration
+  when:
+  - lab in rh_labs
   block:
   - name: Validate controlplane_network is a list
     fail:

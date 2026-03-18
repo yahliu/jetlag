@@ -174,7 +174,8 @@ are `candidate-4.17`, `candidate-4.16` or `latest` which points to the early can
 build of the latest in development release. Checkout https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
 for a list of available builds for `ga` releases and https://mirror.openshift.com/pub/openshift-v4/clients/ocp-dev-preview/
 for a list of `dev` releases. Nightly `ci` builds are tricky and require determining
-exact builds you can use, an example of `ocp_version` with `ocp_build: ci` is `4.19.0-0.nightly-2025-02-25-035256`.
+exact builds you can use, an example of `ocp_version` with `ocp_build: ci` is `4.19.0-0.nightly-2025-02-25-035256`, For 'ci' builds check latest nightly from  https://amd64.ocp.releases.ci.openshift.org/.
+
 
 ```yaml
 ocp_build: "ga"
@@ -251,6 +252,29 @@ To support some particular use cases jetlag implements the option for LACP bondi
 When enabled, uses the first two network interfaces by default (indices 1 & 2).
 Only works with private networks (`public_vlan: false`) and homogeneous hardware.
 At the moment QUADS does not expose any APIs for this kind of networking setup in the labs, so unless you have discussed your particular use case with the DevOps team and the network setup of your cloud allocation is ready to accommodate this config, please disconsider this option.
+
+#### VLAN subinterface on bonding
+Additionally, you can enable VLAN subinterfaces on top of bond0 using the following configuration:
+
+```yaml
+enable_bond: true
+enable_bond_vlan: true
+bond_vlan_id: 10
+# bond_vlan_interface_name: bond0.10  # Optional: defaults to bond0.<vlan_id>
+```
+
+This creates a VLAN subinterface (bond0.10) on top of the bond0 interface with the specified VLAN tag. The IP addresses are assigned to the VLAN subinterface instead of the bond0 interface directly.
+
+**What this configures:**
+- **Bastion host**: Creates bond0 (no IP) + bond0.10 (with controlplane IP) using nmcli
+- **Cluster nodes**: Creates bond0 (no IP) + bond0.10 (with node IPs) using nmstate
+- **Network routing**: All traffic flows through the VLAN subinterface
+
+**Requirements:**
+- `enable_bond` must be set to `true`
+- `bond_vlan_id` must be between 1-4094
+- Only works with private networks (`public_vlan: false`)
+- Network infrastructure must support the specified VLAN tag
 
 ## Configuring NVMe install and etcd disks
 

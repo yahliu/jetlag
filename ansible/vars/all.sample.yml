@@ -28,6 +28,7 @@ ocp_version: "latest-4.20"
 # controlplane_network_prefix, and controlplane_network_gateway to the values required for your cloud's public VLAN.
 # SNO configures only the first cluster on the api dns resolvable address
 # MNO/SNO still requires the correct value for bastion_controlplane_interface
+# It is required to comment out controlplane_network and controlplane_network_prefix in the Network Configuration
 public_vlan: false
 
 # SNOs only require a single IP address and can be deployed using the lab DHCP interface instead of a private or
@@ -71,6 +72,15 @@ setup_bastion_registry: false
 # Use in conjunction with ipv6 based clusters
 use_bastion_registry: false
 
+# Set to enable a forward proxy (Squid) for IPv6 clusters to access external registries
+# This is an alternative to setup_bastion_registry - use one or the other
+# When enabled, cluster nodes use the proxy to reach quay.io, registry.redhat.io, etc.
+setup_bastion_proxy: false
+
+# Reset iDRAC service using badfish container (pulls and uses badfish container
+# to clear job queue and reset iDRAC service)
+# reset_idrac: false
+
 ################################################################################
 # OCP node vars
 ################################################################################
@@ -85,36 +95,42 @@ use_bastion_registry: false
 # Only works with private VLANs (public_vlan: false) and homogeneous hardware
 enable_bond: false
 
-################################################################################
-# Single Stack IPv4 Network Configuration
-################################################################################
-# For single stack IPv4, all network variables should have a single IPv4 element:
-
-# Controlplane network CIDR(machine network)
-controlplane_network:
-- 198.18.0.0/16
-
-# Controlplane network prefix length
-controlplane_network_prefix:
-- 16
-
-# Cluster pod network CIDRs
-cluster_network_cidr:
-- 10.128.0.0/14
-
-# Cluster network host prefix
-cluster_network_host_prefix:
-- 23
-
-# Service network CIDRs
-service_network_cidr:
-- 172.30.0.0/16
+# VLAN subinterface on bond configuration (requires enable_bond: true)
+# Enable VLAN subinterface on top of bond0 interface
+# When enabled, creates bond0.<vlan_id> interface with specified VLAN tag
+enable_bond_vlan: false
+# VLAN ID for the subinterface (1-4094)
+bond_vlan_id: 10
+# Name for the VLAN subinterface (defaults to bond0.<vlan_id>)
+# bond_vlan_interface_name: bond0.10
 
 ################################################################################
-# Single Stack IPv6 Network Configuration
+# Network Configuration
 ################################################################################
-# For single stack IPv6, all network variables should have a single IPv6 element:
+# Network variables default to single-stack IPv4 values via role defaults in
+# ansible/roles/create-inventory/defaults/main/networks.yml
+# Only uncomment and set these if you need to override the defaults
+# (e.g., for IPv6 single stack or dual stack configurations).
 #
+# When public_vlan is enabled, these are auto-configured - do NOT set them.
+
+# Single Stack IPv4 (default - no need to uncomment for standard deployments):
+# controlplane_network:
+# - 198.18.0.0/16
+#
+# controlplane_network_prefix:
+# - 16
+#
+# cluster_network_cidr:
+# - 10.128.0.0/14
+#
+# cluster_network_host_prefix:
+# - 23
+#
+# service_network_cidr:
+# - 172.30.0.0/16
+
+# Single Stack IPv6:
 # controlplane_network:
 # - fd00:198:18:10::/64
 #
@@ -130,37 +146,29 @@ service_network_cidr:
 # service_network_cidr:
 # - fd02::/112
 
-################################################################################
-# Dual Stack Network Configuration
-################################################################################
-# All network variables must be lists:
-# - For single stack (IPv4 only or IPv6 only): Use a list with one element
-# - For dual stack (IPv4 + IPv6): Use a list with two elements [IPv4, IPv6]
-
-# For dual stack, first element must be IPv4, second must be IPv6
-#controlplane_network:
-#- 198.18.0.0/16
-#- fd00:198:18:10::/64
-
-# Must match the length of controlplane_network
-#controlplane_network_prefix:
-#- 16
-#- 64
-
-# For dual stack, include both IPv4 and IPv6 CIDRs
-#cluster_network_cidr:
-#- 10.128.0.0/14
-#- fd01::/48
-
-# Must match the length of cluster_network_cidr
-#cluster_network_host_prefix:
-#- 23
-#- 64
-
-# For dual stack, include both IPv4 and IPv6 CIDRs
-#service_network_cidr:
-#- 172.30.0.0/16
-#- fd02::/112
+# Dual Stack (IPv4 + IPv6):
+# All network variables must be lists with two elements [IPv4, IPv6].
+# First element must be IPv4, second must be IPv6.
+#
+# controlplane_network:
+# - 198.18.0.0/16
+# - fd00:198:18:10::/64
+#
+# controlplane_network_prefix:
+# - 16
+# - 64
+#
+# cluster_network_cidr:
+# - 10.128.0.0/14
+# - fd01::/48
+#
+# cluster_network_host_prefix:
+# - 23
+# - 64
+#
+# service_network_cidr:
+# - 172.30.0.0/16
+# - fd02::/112
 
 ################################################################################
 # Extra vars
